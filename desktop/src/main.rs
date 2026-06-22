@@ -60,7 +60,7 @@ fn draw_screen(emu: &Emu, canvas: &mut Canvas<Window>) {
     canvas.clear();
 
     let screen_buf = emu.get_display();
-    canvas.set_draw_color(Color::RGB(255, 255, 255));
+    canvas.set_draw_color(Color::RGB(20, 148, 20));
     for (i, pixel) in screen_buf.iter().enumerate() {
         if *pixel {
             let x = (i % SCREEN_WIDTH) as u32;

@@ -135,7 +135,7 @@ impl Emu {
         let digit1 = (op & 0xF000) >> 12;
         let digit2 = (op & 0x0F00) >> 8;
         let digit3 = (op & 0x00F0) >> 4;
-        let digit4 = (op & 0x000F);
+        let digit4 = op & 0x000F;
 
         let vx = digit2 as usize;
         let vy = digit3 as usize;
@@ -144,21 +144,54 @@ impl Emu {
         let nnn = op & 0xFFF;
 
         match (digit1, digit2, digit3, digit4) {
+            //00E0: Clear screen.
             (0, 0, 0xE, 0) => {
                 self.screen = [false; SCREEN_WIDTH * SCREEN_HEIGHT];
             },
+            //00EE: Return from subroutine.
+            (0, 0, 0xE, 0xE) => {
+                self.pc = self.pop();
+            },
+            //1NNN: Jump
             (1, _, _, _) => {
                 self.pc = nnn;
             },
+            //2NNN: Subroutine
+            (2, _, _, _) => {
+                self.push(self.pc);
+                self.pc = nnn;
+            },
+            //3XNN: Skip if VX == NN
+            (3, _, _, _) => {
+                if self.v_reg[vx] == nn {
+                    self.pc += 2;
+                }
+            },
+            //4XNN: Skip if VX != NN
+            (4, _, _, _) => {
+                if self.v_reg[vx] != nn {
+                    self.pc += 2;
+                }
+            },
+            //5XY0: Skip if VX == VY
+            (5, _, _, 0) => {
+                if self.v_reg[vx] == self.v_reg[vy] {
+                    self.pc += 2;
+                }
+            },
+            //6XNN: Set
             (6, _, _, _) => {
                 self.v_reg[vx] = nn;
             },
+            //7XNN: Add
             (7, _, _, _) => {
                 self.v_reg[vx] = self.v_reg[vx].wrapping_add(nn);
             },
+            //ANNN: Set index
             (0xA, _, _, _) => {
                 self.i_reg = nnn;
             },
+            //DXYN: Display
             (0xD, _, _, _) => {
                 let x_coord = self.v_reg[vx] as u16;
                 let y_coord = self.v_reg[vy] as u16;
