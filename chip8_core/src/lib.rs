@@ -159,7 +159,31 @@ impl Emu {
             (0xA, _, _, _) => {
                 self.i_reg = nnn;
             },
-            (0xD, _, _, _) => unimplemented!("Display."),
+            (0xD, _, _, _) => {
+                let x_coord = self.v_reg[vx] as u16;
+                let y_coord = self.v_reg[vy] as u16;
+                let mut flipped = false;
+                for y_line in 0..n {
+                    let sprite_row = self.ram[(self.i_reg + y_line as u16) as usize];
+
+                    for x_line in 0..8{
+                        if(sprite_row & (0b1000_0000 >> x_line)) != 0 {
+                            let x = (x_coord + x_line) as usize % SCREEN_WIDTH;
+                            let y = (y_coord + y_line) as usize % SCREEN_HEIGHT;
+
+                            let index = x + SCREEN_WIDTH * y;
+
+                            flipped |= self.screen[index];
+                            self.screen[index] ^= true;
+                        }
+                    }
+                }
+                if flipped {
+                    self.v_reg[0xF] = 1;
+                } else {
+                    self.v_reg[0xF] = 0;
+                }
+            },
             (_, _, _, _) => unimplemented!("Unimplemented opcode: {}", op),
         }
     }
