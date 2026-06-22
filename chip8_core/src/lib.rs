@@ -101,4 +101,51 @@ impl Emu {
         self.sp -= 1;
         self.stack[self.sp as usize]
     }
+
+    pub fn tick(&mut self) {
+        //Fetch
+        let op = self.fetch();
+
+        //Decode & Execute
+        self.execute(op);
+    }
+
+    fn fetch(&mut self) -> u16 {
+        let higher_byte = self.ram[self.pc as usize] as u16;
+        let lower_byte = self.ram[(self.pc + 1) as usize] as u16;
+        let op = (higher_byte << 8) | lower_byte;
+        self.pc += 2;
+        op
+    }
+
+    pub fn tick_timers(&mut self) {
+        if self.dt > 0 {
+            self.dt -= 1;
+        }
+
+        if self.st > 0 {
+            if self.st == 1 {
+                //beep
+            }
+            self.st -= 1;
+        }
+    }
+
+    fn execute(&mut self, op: u16) {
+        let digit1 = (op & 0xF000) >> 12;
+        let digit2 = (op & 0x0F00) >> 8;
+        let digit3 = (op & 0x00F0) >> 4;
+        let digit4 = (op & 0x000F);
+
+        match (digit1, digit2, digit3, digit4) {
+            (0, 0, 0xE, 0) => unimplemented!("Clear screen"),
+            (1, _, _, _) => unimplemented!("Jump"),
+            (6, _, _, _) => unimplemented!("Set register VX"),
+            (7, _, _, _) => unimplemented!("Add value to register VX"),
+            (0xA, _, _, _) => unimplemented!("Set index register I"),
+            (0xD, _, _, _) => unimplemented!("Display."),
+            (_, _, _, _) => unimplemented!("Unimplemented opcode: {}", op),
+        }
+    }
+
 }
