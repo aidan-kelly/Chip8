@@ -137,12 +137,28 @@ impl Emu {
         let digit3 = (op & 0x00F0) >> 4;
         let digit4 = (op & 0x000F);
 
+        let vx = digit2 as usize;
+        let vy = digit3 as usize;
+        let n = digit4;
+        let nn = (op & 0xFF) as u8;
+        let nnn = op & 0xFFF;
+
         match (digit1, digit2, digit3, digit4) {
-            (0, 0, 0xE, 0) => unimplemented!("Clear screen"),
-            (1, _, _, _) => unimplemented!("Jump"),
-            (6, _, _, _) => unimplemented!("Set register VX"),
-            (7, _, _, _) => unimplemented!("Add value to register VX"),
-            (0xA, _, _, _) => unimplemented!("Set index register I"),
+            (0, 0, 0xE, 0) => {
+                self.screen = [false; SCREEN_WIDTH * SCREEN_HEIGHT];
+            },
+            (1, _, _, _) => {
+                self.pc = nnn;
+            },
+            (6, _, _, _) => {
+                self.v_reg[vx] = nn;
+            },
+            (7, _, _, _) => {
+                self.v_reg[vx] = self.v_reg[vx].wrapping_add(nn);
+            },
+            (0xA, _, _, _) => {
+                self.i_reg = nnn;
+            },
             (0xD, _, _, _) => unimplemented!("Display."),
             (_, _, _, _) => unimplemented!("Unimplemented opcode: {}", op),
         }
