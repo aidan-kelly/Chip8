@@ -1,3 +1,5 @@
+use rand::random;
+
 pub const SCREEN_WIDTH: usize = 64;
 pub const SCREEN_HEIGHT: usize = 32;
 
@@ -187,9 +189,70 @@ impl Emu {
             (7, _, _, _) => {
                 self.v_reg[vx] = self.v_reg[vx].wrapping_add(nn);
             },
+            //8XY0: Set VX = VY
+            (8, _, _, 0) => {
+                self.v_reg[vx] = self.v_reg[vy];
+            },
+            //8XY1: Binary OR
+            (8, _, _, 1) => {
+                self.v_reg[vx] |= self.v_reg[vy];
+            },
+            //8XY2: Binary AND
+            (8, _, _, 2) => {
+                self.v_reg[vx] &= self.v_reg[vy];
+            },
+            //8XY3: Logical XOR
+            (8, _, _, 3) => {
+                self.v_reg[vx] ^= self.v_reg[vy];
+            },
+            //8XY4: Add
+            (8, _, _, 4) => {
+                let (new_vx, carry) = self.v_reg[vx].overflowing_add(self.v_reg[vy]);
+                self.v_reg[0xF] = if carry { 1 } else { 0 };
+                self.v_reg[vx] = new_vx;
+            },
+            //8XY5: Subtract
+            (8, _, _, 5) => {
+                let (new_vx, borrow) = self.v_reg[vx].overflowing_sub(self.v_reg[vy]);
+                self.v_reg[0xF] = if borrow { 0 } else { 1 };
+                self.v_reg[vx] = new_vx;
+            },
+            //8XY6: Shift
+            (8, _, _, 6) => {
+                let lsb = self.v_reg[vx] & 1;
+                self.v_reg[vx] >>= 1;
+                self.v_reg[0xF] = lsb;
+            },
+            //8XY7: Subtract
+            (8, _, _, 7) => {
+                let (new_vx, borrow) = self.v_reg[vy].overflowing_sub(self.v_reg[vx]);
+                self.v_reg[0xF] = if borrow { 0 } else { 1 };
+                self.v_reg[vx] = new_vx;
+            },
+            //8XYE: Shift
+            (8, _, _, 0xE) => {
+                let msb = (self.v_reg[vx] >> 7) & 1;
+                self.v_reg[vx] <<= 1;
+                self.v_reg[0xF] = msb;
+            },
+            //9XY0: Ship if VX != VY
+            (9, _, _, 0) => {
+                if self.v_reg[vx] != self.v_reg[vy] {
+                    self.pc += 2;
+                }
+            },
             //ANNN: Set index
             (0xA, _, _, _) => {
                 self.i_reg = nnn;
+            },
+            //BNNN: Jump with offset
+            (0xB, _, _, _) => {
+                self.pc = nnn + (self.v_reg[0] as u16);
+            },
+            //CXNN: Random
+            (0xC, _, _, _) => {
+                let rng: u8 = random();
+                self.v_reg[vx] = rng & nn;
             },
             //DXYN: Display
             (0xD, _, _, _) => {
@@ -216,6 +279,54 @@ impl Emu {
                 } else {
                     self.v_reg[0xF] = 0;
                 }
+            },
+            //EX9E: Skip if key
+            (0xE, _, 9, 0xE) => {
+                if self.keys[self.v_reg[vx] as usize] {
+                    self.pc += 2;
+                }
+            },
+            //EXA1: Skip if key
+            (0xE, _, 0xA, 1) => {
+                if !self.keys[self.v_reg[vx] as usize] {
+                    self.pc += 2;
+                }
+            },
+            //FX07: Get delay timer value
+            (0xF, _, 0, 7) => {
+                self.v_reg[vx] = self.dt;
+            },
+            //FX15: set delay timer value
+            (0xF, _, 1, 5) => {
+                self.dt = self.v_reg[vx];
+            },
+            //FX18: set sound timer value
+            (0xF, _, 1, 8) => {
+                self.st = self.v_reg[vx];
+            },
+            //FX1E: add to index
+            (0xF, _, 1, 0xE) => {
+                self.i_reg = self.i_reg.wrapping_add(self.v_reg[vx] as u16);
+            },
+            //FX0A: Get key.
+            (0xF, _, 0, 0xA) => {
+                
+            },
+            //FX29: Font character.
+            (0xF, _, 2, 9) => {
+                
+            },
+            //FX33: Binary-coded decimal conversion.
+            (0xF, _, 3, 3) => {
+                
+            },
+            //FX55: Store in memory.
+            (0xF, _, 5, 5) => {
+                
+            },
+            //FX65: Load memory.
+            (0xF, _, 6, 5) => {
+                
             },
             (_, _, _, _) => unimplemented!("Unimplemented opcode: {}", op),
         }
