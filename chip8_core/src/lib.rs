@@ -310,15 +310,33 @@ impl Emu {
             },
             //FX0A: Get key.
             (0xF, _, 0, 0xA) => {
-                
+                let mut pressed = false;
+
+                for key_index in 0..NUM_KEYS {
+                    if self.keys[key_index] {
+                        self.v_reg[vx] = key_index as u8;
+                        pressed = true;
+                    }
+                }
+                if !pressed {
+                    self.pc -= 2;
+                }
             },
             //FX29: Font character.
             (0xF, _, 2, 9) => {
-                
+                self.i_reg = self.v_reg[vx] as u16 * 5;
             },
             //FX33: Binary-coded decimal conversion.
             (0xF, _, 3, 3) => {
-                
+                let value = self.v_reg[vx] as f32;
+
+                let hundreds = (value / 100.0).floor() as u8;
+                let tens = (value / 10.0).floor() as u8;
+                let ones = (value / 10.0) as u8;
+
+                self.ram[self.i_reg as usize] = hundreds;
+                self.ram[(self.i_reg + 1) as usize] = tens;
+                self.ram[(self.i_reg + 2) as usize] = ones;
             },
             //FX55: Store in memory.
             (0xF, _, 5, 5) => {
