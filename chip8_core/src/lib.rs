@@ -328,23 +328,27 @@ impl Emu {
             },
             //FX33: Binary-coded decimal conversion.
             (0xF, _, 3, 3) => {
-                let value = self.v_reg[vx] as f32;
+                let value = self.v_reg[vx];
 
-                let hundreds = (value / 100.0).floor() as u8;
-                let tens = (value / 10.0).floor() as u8;
-                let ones = (value / 10.0) as u8;
-
-                self.ram[self.i_reg as usize] = hundreds;
-                self.ram[(self.i_reg + 1) as usize] = tens;
-                self.ram[(self.i_reg + 2) as usize] = ones;
+                self.ram[self.i_reg as usize] = value / 100;
+                self.ram[(self.i_reg + 1) as usize] = (value / 10) % 10;
+                self.ram[(self.i_reg + 2) as usize] = value % 10;
             },
             //FX55: Store in memory.
             (0xF, _, 5, 5) => {
-                
+                let mut ram_addr = self.i_reg as usize;
+                for index in 0..=vx {
+                    self.ram[ram_addr] = self.v_reg[index];
+                    ram_addr += 1;
+                }
             },
             //FX65: Load memory.
             (0xF, _, 6, 5) => {
-                
+                let mut ram_addr = self.i_reg as usize;
+                for index in 0..=vx {
+                    self.v_reg[index] = self.ram[ram_addr];
+                    ram_addr += 1;
+                }
             },
             (_, _, _, _) => unimplemented!("Unimplemented opcode: {}", op),
         }
