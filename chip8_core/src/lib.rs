@@ -196,29 +196,33 @@ impl Emu {
             //8XY1: Binary OR
             (8, _, _, 1) => {
                 self.v_reg[vx] |= self.v_reg[vy];
+                self.v_reg[0xF] = 0;
             },
             //8XY2: Binary AND
             (8, _, _, 2) => {
                 self.v_reg[vx] &= self.v_reg[vy];
+                self.v_reg[0xF] = 0;
             },
             //8XY3: Logical XOR
             (8, _, _, 3) => {
                 self.v_reg[vx] ^= self.v_reg[vy];
+                self.v_reg[0xF] = 0;
             },
             //8XY4: Add
             (8, _, _, 4) => {
                 let (new_vx, carry) = self.v_reg[vx].overflowing_add(self.v_reg[vy]);
-                self.v_reg[0xF] = if carry { 1 } else { 0 };
                 self.v_reg[vx] = new_vx;
+                self.v_reg[0xF] = if carry { 1 } else { 0 };
             },
             //8XY5: Subtract
             (8, _, _, 5) => {
                 let (new_vx, borrow) = self.v_reg[vx].overflowing_sub(self.v_reg[vy]);
-                self.v_reg[0xF] = if borrow { 0 } else { 1 };
                 self.v_reg[vx] = new_vx;
+                self.v_reg[0xF] = if borrow { 0 } else { 1 };
             },
             //8XY6: Shift
             (8, _, _, 6) => {
+                self.v_reg[vx] = self.v_reg[vy];
                 let lsb = self.v_reg[vx] & 1;
                 self.v_reg[vx] >>= 1;
                 self.v_reg[0xF] = lsb;
@@ -226,11 +230,12 @@ impl Emu {
             //8XY7: Subtract
             (8, _, _, 7) => {
                 let (new_vx, borrow) = self.v_reg[vy].overflowing_sub(self.v_reg[vx]);
-                self.v_reg[0xF] = if borrow { 0 } else { 1 };
                 self.v_reg[vx] = new_vx;
+                self.v_reg[0xF] = if borrow { 0 } else { 1 };
             },
             //8XYE: Shift
             (8, _, _, 0xE) => {
+                self.v_reg[vx] = self.v_reg[vy];
                 let msb = (self.v_reg[vx] >> 7) & 1;
                 self.v_reg[vx] <<= 1;
                 self.v_reg[0xF] = msb;
@@ -336,18 +341,18 @@ impl Emu {
             },
             //FX55: Store in memory.
             (0xF, _, 5, 5) => {
-                let mut ram_addr = self.i_reg as usize;
+                //let mut ram_addr = self.i_reg as usize;
                 for index in 0..=vx {
-                    self.ram[ram_addr] = self.v_reg[index];
-                    ram_addr += 1;
+                    self.ram[self.i_reg as usize] = self.v_reg[index];
+                    self.i_reg += 1;
                 }
             },
             //FX65: Load memory.
             (0xF, _, 6, 5) => {
-                let mut ram_addr = self.i_reg as usize;
+                //let mut ram_addr = self.i_reg as usize;
                 for index in 0..=vx {
-                    self.v_reg[index] = self.ram[ram_addr];
-                    ram_addr += 1;
+                    self.v_reg[index] = self.ram[self.i_reg as usize];
+                    self.i_reg += 1;
                 }
             },
             (_, _, _, _) => unimplemented!("Unimplemented opcode: {}", op),
