@@ -1,4 +1,5 @@
 use chip8_core::*;
+use sdl2::audio::{AudioCallback, AudioSpecDesired};
 use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
 use sdl2::pixels::Color;
@@ -14,6 +15,28 @@ const WINDOW_WIDTH: u32 = (SCREEN_WIDTH as u32) * SCALE;
 const WINDOW_HEIGHT: u32 = (SCREEN_HEIGHT as u32) * SCALE;
 const TICKS_PER_FRAME: usize = 10;
 
+struct SquareWave
+{
+    phase: f32,
+    volume: f32,
+}
+
+impl AudioCallback for SquareWave
+{
+    type Channel = f32;
+
+    fn callback(&mut self, out: &mut [f32])
+    {
+        for x in out.iter_mut()
+        {
+            *x = if self.phase < 0.5 {self.volume} else {-self.volume};
+            self.phase = (self.phase + 440.0 / 44100.0) % 1.0;
+        }
+    }
+}
+
+
+
 fn main() {
     let args: Vec<_> = env::args().collect();
     if args.len() != 2 {
@@ -21,6 +44,7 @@ fn main() {
         return;
     }
 
+    //Video setup
     let sdl_context = sdl2::init().unwrap();
     let video_subsystem = sdl_context.video().unwrap();
     let window = video_subsystem
@@ -33,6 +57,18 @@ fn main() {
     let mut canvas = window.into_canvas().present_vsync().build().unwrap();
     canvas.clear();
     canvas.present();
+
+    //Audio setup
+    let audio_subsystem = sdl_context.audio().unwrap();
+    let desired = AudioSpecDesired {
+        freq: Some(44100),
+        channels: Some(1),
+        samples: None,
+    };
+
+    let device = audio_subsystem.open_playback(None, &desired, |_spec| {
+        SquareWave { phase: 0.0, volume: 0.1 }
+    }).unwrap();
 
     let mut event_pump = sdl_context.event_pump().unwrap();
 
@@ -64,6 +100,11 @@ fn main() {
 
         for _ in 0..TICKS_PER_FRAME {
             chip8.tick();
+        }
+        if chip8.check_sound_timer() {
+            device.resume();
+        } else {
+            device.pause();
         }
         chip8.tick_timers();
 

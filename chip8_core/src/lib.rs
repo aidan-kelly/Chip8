@@ -84,6 +84,14 @@ impl Emu {
         &self.screen
     }
 
+    pub fn check_sound_timer(&self) -> bool {
+        if self.st > 0 {
+            true
+        } else {
+            false
+        }
+    }
+
     pub fn keypress(&mut self, idx: usize, pressed: bool) {
         self.keys[idx] = pressed;
     }
